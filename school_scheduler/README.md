@@ -6,7 +6,6 @@ The Scheduler Application is a comprehensive tool designed to assist college stu
 2. **To-Do List**
 3. **Analytics Analysis**
 
-Below are detailed descriptions of each component and their features.
 
 ---
 
