@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load highlight_code %}
 
 {% block content %}
 <div class="container mt-5">
@@ -60,6 +61,12 @@
                     {% endfor %}
                 </tbody>
             </table>
+
+            <!-- Algorithm Section -->
+            {% if algorithm_code %}
+            <h4 class="mt-4">Trading Algorithm</h4>
+            <pre><code class="language-python">{{ algorithm_code|escape }}</code></pre>
+            {% endif %}
         </div>
 
         <!-- Performance Chart -->
@@ -73,6 +80,11 @@
         </div>
     </div>
 </div>
+
+<!-- Include Prism.js for Syntax Highlighting -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
 
 <!-- Data for Charts -->
 {{ bot.performance_data|json_script:"performance-data" }}
@@ -94,11 +106,12 @@
                 data: values,
                 borderColor: 'rgba(54, 162, 235, 1)',
                 fill: false,
+                tension: 0.4,
             }]
         },
         options: {
             scales: {
-                y: { beginAtZero: true }
+                y: { beginAtZero: false }
             }
         }
     });
