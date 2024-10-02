@@ -2,15 +2,143 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkcalendar import Calendar, DateEntry
 import datetime
+import sqlite3
+import bcrypt
+import threading
+import time
+import json
+import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from plyer import notification
 
 class CollegeScheduler(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("Scheduler")
-        self.geometry("1400x800")  # Increased window size
+        self.title("College Scheduler")
+        self.geometry("1200x800")
+        self.style = ttk.Style(self)
+        self.style.theme_use('clam')  # Use a modern theme
+
+        # Initialize Database
+        self.conn = sqlite3.connect('scheduler.db')
+        self.create_tables()
+
+        # User Authentication
+        self.current_user = None
+        self.show_login_screen()
+
+    # ---------------------- Database Methods ---------------------- #
+    def create_tables(self):
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tasks (
+                task_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                task TEXT,
+                due_date DATE,
+                priority TEXT,
+                completed INTEGER DEFAULT 0,
+                FOREIGN KEY(user_id) REFERENCES users(user_id)
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS events (
+                event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                title TEXT,
+                event_date DATE,
+                event_type TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(user_id)
+            )
+        ''')
+        self.conn.commit()
+
+    # ---------------------- User Authentication ---------------------- #
+    def show_login_screen(self):
+        self.clear_window()
+
+        login_frame = ttk.Frame(self)
+        login_frame.pack(pady=100)
+
+        ttk.Label(login_frame, text="Login", font=("Helvetica", 24)).grid(row=0, column=0, columnspan=2, pady=20)
+
+        ttk.Label(login_frame, text="Username:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.E)
+        self.login_username_entry = ttk.Entry(login_frame)
+        self.login_username_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        ttk.Label(login_frame, text="Password:").grid(row=2, column=0, padx=5, pady=5, sticky=tk.E)
+        self.login_password_entry = ttk.Entry(login_frame, show='*')
+        self.login_password_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        login_btn = ttk.Button(login_frame, text="Login", command=self.login)
+        login_btn.grid(row=3, column=0, columnspan=2, pady=10)
+
+        register_btn = ttk.Button(login_frame, text="Register", command=self.show_registration_screen)
+        register_btn.grid(row=4, column=0, columnspan=2)
+
+    def show_registration_screen(self):
+        self.clear_window()
+
+        register_frame = ttk.Frame(self)
+        register_frame.pack(pady=100)
+
+        ttk.Label(register_frame, text="Register", font=("Helvetica", 24)).grid(row=0, column=0, columnspan=2, pady=20)
+
+        ttk.Label(register_frame, text="Username:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.E)
+        self.register_username_entry = ttk.Entry(register_frame)
+        self.register_username_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        ttk.Label(register_frame, text="Password:").grid(row=2, column=0, padx=5, pady=5, sticky=tk.E)
+        self.register_password_entry = ttk.Entry(register_frame, show='*')
+        self.register_password_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        register_btn = ttk.Button(register_frame, text="Register", command=self.register)
+        register_btn.grid(row=3, column=0, columnspan=2, pady=10)
+
+        back_btn = ttk.Button(register_frame, text="Back to Login", command=self.show_login_screen)
+        back_btn.grid(row=4, column=0, columnspan=2)
+
+    def login(self):
+        username = self.login_username_entry.get()
+        password = self.login_password_entry.get().encode('utf-8')
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT user_id, password_hash FROM users WHERE username=?", (username,))
+        result = cursor.fetchone()
+
+        if result and bcrypt.checkpw(password, result[1]):
+            self.current_user = result[0]
+            self.show_main_application()
+            threading.Thread(target=self.notification_worker, daemon=True).start()
+        else:
+            messagebox.showerror("Login Failed", "Invalid username or password.")
+
+    def register(self):
+        username = self.register_username_entry.get()
+        password = self.register_password_entry.get().encode('utf-8')
+        password_hash = bcrypt.hashpw(password, bcrypt.gensalt())
+
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
+            self.conn.commit()
+            messagebox.showinfo("Registration Successful", "You can now log in.")
+            self.show_login_screen()
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Registration Failed", "Username already exists.")
+
+    # ---------------------- Main Application ---------------------- #
+    def show_main_application(self):
+        self.clear_window()
 
         # Create Notebook for Tabs
         self.notebook = ttk.Notebook(self)
@@ -18,409 +146,345 @@ class CollegeScheduler(tk.Tk):
 
         # Create Frames for Tabs
         self.scheduler_frame = ttk.Frame(self.notebook)
+        self.tasks_frame = ttk.Frame(self.notebook)
         self.analytics_frame = ttk.Frame(self.notebook)
+        self.help_frame = ttk.Frame(self.notebook)
 
         self.notebook.add(self.scheduler_frame, text='Scheduler')
+        self.notebook.add(self.tasks_frame, text='Tasks')
         self.notebook.add(self.analytics_frame, text='Analytics')
+        self.notebook.add(self.help_frame, text='Help')
 
-        self.events = {}  # Dictionary to store events
-        self.tasks = []   # List to store tasks
-        self.completed_tasks = []  # List to store completed tasks
-
-        self.create_scheduler()
-        self.create_analytics()
+        self.create_scheduler_tab()
+        self.create_tasks_tab()
+        self.create_analytics_tab()
+        self.create_help_tab()
 
     # ---------------------- Scheduler Tab ---------------------- #
-    def create_scheduler(self):
-        # Create PanedWindow
-        paned_window = ttk.PanedWindow(self.scheduler_frame, orient=tk.HORIZONTAL)
-        paned_window.pack(fill=tk.BOTH, expand=True)
+    def create_scheduler_tab(self):
+        # Calendar and Event Management
+        self.scheduler_frame.columnconfigure(0, weight=1)
+        self.scheduler_frame.rowconfigure(0, weight=1)
 
-        # Left Frame for Calendar
-        self.calendar_frame = ttk.Frame(paned_window, relief=tk.SUNKEN)
-        paned_window.add(self.calendar_frame, weight=3)
+        calendar_frame = ttk.Frame(self.scheduler_frame)
+        calendar_frame.grid(row=0, column=0, sticky='nsew')
 
-        # Right Frame for To-Do List
-        self.todo_frame = ttk.Frame(paned_window, width=300, relief=tk.SUNKEN)
-        paned_window.add(self.todo_frame, weight=2)
-
-        self.create_calendar()
-        self.create_todo_list()
-
-    def create_calendar(self):
-        ttk.Label(self.calendar_frame, text="Calendar", font=("Helvetica", 24)).pack(pady=10)
+        ttk.Label(calendar_frame, text="Calendar", font=("Helvetica", 18)).pack(pady=10)
 
         self.calendar = Calendar(
-            self.calendar_frame,
+            calendar_frame,
             selectmode='day',
             date_pattern='yyyy-mm-dd',
-            firstweekday='sunday',
-            showweeknumbers=False,
-            font=("Helvetica", 16),  # Increased font size
-            headersforeground='black',
-            headersbackground='lightgrey',
-            borderwidth=2,
-            relief='ridge',
-            disableddaybackground='white',
-            weekendforeground='red',
-            weekendbackground='white',
-            othermonthweforeground='red',
-            othermonthwebackground='white',
-            othermonthforeground='grey',
-            othermonthbackground='white',
-            selectforeground='white',
-            selectbackground='blue',
-            foreground='black',
-            background='white',
+            font=("Helvetica", 12),
             cursor="hand1"
         )
         self.calendar.pack(pady=10, padx=10, expand=True, fill=tk.BOTH)
+        self.calendar.bind("<<CalendarSelected>>", self.update_event_list)
 
-        # Expand the calendar frame
-        self.calendar_frame.pack_propagate(False)
-        self.calendar_frame.config(width=800, height=600)  # Adjusted size
+        # Event List
+        event_list_frame = ttk.Frame(self.scheduler_frame)
+        event_list_frame.grid(row=0, column=1, sticky='nsew')
 
-        # Bind the date selection event
-        self.calendar.bind("<<CalendarSelected>>", self.show_events_for_selected_date)
+        self.events_listbox = tk.Listbox(event_list_frame, font=("Helvetica", 12))
+        self.events_listbox.pack(pady=10, padx=10, expand=True, fill=tk.BOTH)
 
-        # Frame for adding events
-        event_frame = ttk.LabelFrame(self.calendar_frame, text="Add Event")
-        event_frame.pack(pady=10, fill=tk.X, padx=20)
+        # Event Management
+        event_mgmt_frame = ttk.Frame(self.scheduler_frame)
+        event_mgmt_frame.grid(row=1, column=0, columnspan=2, sticky='ew')
 
-        ttk.Label(event_frame, text="Event Title:", font=("Helvetica", 12)).grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
-        self.event_title_entry = ttk.Entry(event_frame, width=30)
-        self.event_title_entry.grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(event_mgmt_frame, text="Add Event", font=("Helvetica", 16)).grid(row=0, column=0, columnspan=4, pady=10)
 
-        ttk.Label(event_frame, text="Event Date:", font=("Helvetica", 12)).grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
-        self.event_date_entry = DateEntry(event_frame, date_pattern='yyyy-mm-dd')
-        self.event_date_entry.grid(row=1, column=1, padx=5, pady=5)
+        ttk.Label(event_mgmt_frame, text="Title:").grid(row=1, column=0, padx=5, pady=5)
+        self.event_title_entry = ttk.Entry(event_mgmt_frame)
+        self.event_title_entry.grid(row=1, column=1, padx=5, pady=5)
 
-        ttk.Label(event_frame, text="Event Type:", font=("Helvetica", 12)).grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
-        self.event_type = tk.StringVar()
-        event_types = ['Exam', 'Club Event', 'Meeting', 'Job Hunting', 'Homework', 'Other']
-        self.event_type_combo = ttk.Combobox(event_frame, textvariable=self.event_type, values=event_types, state='readonly')
+        ttk.Label(event_mgmt_frame, text="Date:").grid(row=1, column=2, padx=5, pady=5)
+        self.event_date_entry = DateEntry(event_mgmt_frame, date_pattern='yyyy-mm-dd')
+        self.event_date_entry.grid(row=1, column=3, padx=5, pady=5)
+
+        ttk.Label(event_mgmt_frame, text="Type:").grid(row=2, column=0, padx=5, pady=5)
+        self.event_type_var = tk.StringVar()
+        event_types = ['Exam', 'Meeting', 'Assignment', 'Other']
+        self.event_type_combo = ttk.Combobox(event_mgmt_frame, textvariable=self.event_type_var, values=event_types, state='readonly')
         self.event_type_combo.grid(row=2, column=1, padx=5, pady=5)
 
-        ttk.Label(event_frame, text="Recurring:", font=("Helvetica", 12)).grid(row=3, column=0, padx=5, pady=5, sticky=tk.W)
-        self.event_recur = tk.StringVar()
-        recur_options = ['None', 'Daily', 'Weekly', 'Monthly']
-        self.event_recur_combo = ttk.Combobox(event_frame, textvariable=self.event_recur, values=recur_options, state='readonly')
-        self.event_recur_combo.set('None')
-        self.event_recur_combo.grid(row=3, column=1, padx=5, pady=5)
+        add_event_btn = ttk.Button(event_mgmt_frame, text="Add Event", command=self.add_event)
+        add_event_btn.grid(row=2, column=2, columnspan=2, padx=5, pady=5)
 
-        add_event_btn = ttk.Button(event_frame, text="Add Event", command=self.add_event)
-        add_event_btn.grid(row=4, column=0, columnspan=2, pady=10)
-
-        # Frame for displaying events on selected date
-        self.events_display_frame = ttk.LabelFrame(self.calendar_frame, text="Events on Selected Date")
-        self.events_display_frame.pack(pady=10, fill=tk.BOTH, expand=True, padx=20)
-
-        # Search Bar
-        search_frame = ttk.Frame(self.events_display_frame)
-        search_frame.pack(fill=tk.X, padx=5, pady=5)
-
-        ttk.Label(search_frame, text="Search:").pack(side=tk.LEFT, padx=5)
-        self.event_search_var = tk.StringVar()
-        self.event_search_var.trace('w', self.update_event_list)
-        self.event_search_entry = ttk.Entry(search_frame, textvariable=self.event_search_var)
-        self.event_search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-
-        # Filter by Event Type
-        ttk.Label(search_frame, text="Filter by Type:").pack(side=tk.LEFT, padx=5)
-        self.event_filter_var = tk.StringVar()
-        self.event_filter_var.set('All')
-        event_filter_options = ['All'] + event_types
-        self.event_filter_combo = ttk.Combobox(search_frame, textvariable=self.event_filter_var, values=event_filter_options, state='readonly')
-        self.event_filter_combo.bind("<<ComboboxSelected>>", self.update_event_list)
-        self.event_filter_combo.pack(side=tk.LEFT, padx=5)
-
-        self.events_listbox = tk.Listbox(self.events_display_frame, font=("Helvetica", 12))
-        self.events_listbox.pack(fill=tk.BOTH, expand=True)
+        self.update_calendar_events()
 
     def add_event(self):
-        event_title = self.event_title_entry.get()
-        event_type = self.event_type.get()
+        title = self.event_title_entry.get()
         event_date = self.event_date_entry.get_date()
-        recur_pattern = self.event_recur.get()
+        event_type = self.event_type_var.get()
 
-        if event_title and event_type:
-            dates = [event_date]
-            if recur_pattern != 'None':
-                dates = self.generate_recurring_dates(event_date, recur_pattern)
+        if not title or not event_type:
+            messagebox.showwarning("Input Error", "Please fill in all fields.")
+            return
 
-            for event_date in dates:
-                event_info = {'type': event_type, 'title': event_title}
-                if event_date in self.events:
-                    self.events[event_date].append(event_info)
-                else:
-                    self.events[event_date] = [event_info]
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT INTO events (user_id, title, event_date, event_type)
+            VALUES (?, ?, ?, ?)
+        ''', (self.current_user, title, event_date, event_type))
+        self.conn.commit()
 
-            self.event_title_entry.delete(0, tk.END)
-            self.event_type_combo.set('')
-            self.event_recur_combo.set('None')
-            self.event_date_entry.set_date(datetime.date.today())
+        self.event_title_entry.delete(0, tk.END)
+        self.event_type_combo.set('')
+        self.event_date_entry.set_date(datetime.date.today())
 
-            messagebox.showinfo("Event Added", f"Event '{event_title}' added.")
-        else:
-            messagebox.showwarning("Input Error", "Please enter both event title and type.")
-
-        self.calendar.calevent_remove('all')
-        self.display_events()
-        self.show_events_for_selected_date()
-
-    def generate_recurring_dates(self, start_date, pattern):
-        dates = []
-        current_date = start_date
-        end_date = start_date + datetime.timedelta(days=365)
-        while current_date <= end_date:
-            dates.append(current_date)
-            if pattern == 'Daily':
-                current_date += datetime.timedelta(days=1)
-            elif pattern == 'Weekly':
-                current_date += datetime.timedelta(weeks=1)
-            elif pattern == 'Monthly':
-                month = current_date.month + 1 if current_date.month < 12 else 1
-                year = current_date.year + 1 if current_date.month == 12 else current_date.year
-                day = min(current_date.day, 28)  # To handle February
-                current_date = datetime.date(year, month, day)
-            else:
-                break
-        return dates
-
-    def display_events(self):
-        # Highlight dates with events
-        self.calendar.calevent_remove('all')
-        for date, events in self.events.items():
-            for event in events:
-                color = self.get_event_color(event['type'])
-                self.calendar.calevent_create(date, '', tags=date)
-                self.calendar.tag_config(date, background=color)
-
-    def get_event_color(self, event_type):
-        color_map = {
-            'Exam': 'red',
-            'Club Event': 'green',
-            'Meeting': 'blue',
-            'Job Hunting': 'orange',
-            'Homework': 'purple',
-            'Other': 'grey'
-        }
-        return color_map.get(event_type, 'lightblue')
-
-    def show_events_for_selected_date(self, event=None):
+        self.update_calendar_events()
         self.update_event_list()
 
-    def update_event_list(self, *args):
-        # Clear the listbox
+    def update_calendar_events(self):
+        self.calendar.calevent_remove('all')
+
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT event_date, event_type FROM events
+            WHERE user_id=?
+        ''', (self.current_user,))
+        events = cursor.fetchall()
+
+        for event_date_str, event_type in events:
+            event_date = datetime.datetime.strptime(event_date_str, '%Y-%m-%d').date()
+            color = self.get_event_color(event_type)
+            self.calendar.calevent_create(event_date, event_type, tags=event_type)
+            self.calendar.tag_config(event_type, background=color)
+
+    def update_event_list(self, event=None):
+        selected_date = self.calendar.selection_get()
         self.events_listbox.delete(0, tk.END)
 
-        date = self.calendar.selection_get()
-        events = self.events.get(date, [])
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT title, event_type FROM events
+            WHERE user_id=? AND event_date=?
+        ''', (self.current_user, selected_date))
+        events = cursor.fetchall()
 
-        search_query = self.event_search_var.get().lower()
-        filter_type = self.event_filter_var.get()
-
-        filtered_events = []
-        for event_info in events:
-            if search_query in event_info['title'].lower():
-                if filter_type == 'All' or filter_type == event_info['type']:
-                    filtered_events.append(event_info)
-
-        if filtered_events:
-            for event_info in filtered_events:
-                display_text = f"{event_info['type']}: {event_info['title']}"
+        if events:
+            for title, event_type in events:
+                display_text = f"{event_type}: {title}"
                 self.events_listbox.insert(tk.END, display_text)
         else:
             self.events_listbox.insert(tk.END, "No events on this date.")
 
-    def create_todo_list(self):
-        ttk.Label(self.todo_frame, text="To-Do List", font=("Helvetica", 18)).pack(pady=10)
+    def get_event_color(self, event_type):
+        color_map = {
+            'Exam': 'red',
+            'Meeting': 'blue',
+            'Assignment': 'green',
+            'Other': 'grey'
+        }
+        return color_map.get(event_type, 'black')
 
-        # Frame for adding tasks
-        add_task_frame = ttk.LabelFrame(self.todo_frame, text="Add Task")
-        add_task_frame.pack(pady=10, fill=tk.X, padx=20)
+    # ---------------------- Tasks Tab ---------------------- #
+    def create_tasks_tab(self):
+        self.tasks_frame.columnconfigure(0, weight=1)
+        self.tasks_frame.rowconfigure(0, weight=1)
 
-        ttk.Label(add_task_frame, text="Task:", font=("Helvetica", 12)).grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
-        self.task_entry = ttk.Entry(add_task_frame, width=30)
-        self.task_entry.grid(row=0, column=1, padx=5, pady=5)
+        # Task List
+        task_list_frame = ttk.Frame(self.tasks_frame)
+        task_list_frame.grid(row=0, column=0, sticky='nsew')
 
-        ttk.Label(add_task_frame, text="Due Date:", font=("Helvetica", 12)).grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
-        self.task_due_date = DateEntry(add_task_frame, date_pattern='yyyy-mm-dd')
-        self.task_due_date.grid(row=1, column=1, padx=5, pady=5)
+        self.tasks_tree = ttk.Treeview(task_list_frame, columns=('Due Date', 'Priority'), show='headings')
+        self.tasks_tree.heading('Due Date', text='Due Date')
+        self.tasks_tree.heading('Priority', text='Priority')
+        self.tasks_tree.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(add_task_frame, text="Priority:", font=("Helvetica", 12)).grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
-        self.task_priority = tk.StringVar()
-        priority_options = ['High', 'Medium', 'Low']
-        self.task_priority_combo = ttk.Combobox(add_task_frame, textvariable=self.task_priority, values=priority_options, state='readonly')
-        self.task_priority_combo.set('Medium')
+        # Task Management
+        task_mgmt_frame = ttk.Frame(self.tasks_frame)
+        task_mgmt_frame.grid(row=1, column=0, sticky='ew')
+
+        ttk.Label(task_mgmt_frame, text="Add Task", font=("Helvetica", 16)).grid(row=0, column=0, columnspan=4, pady=10)
+
+        ttk.Label(task_mgmt_frame, text="Task:").grid(row=1, column=0, padx=5, pady=5)
+        self.task_entry = ttk.Entry(task_mgmt_frame)
+        self.task_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        ttk.Label(task_mgmt_frame, text="Due Date:").grid(row=1, column=2, padx=5, pady=5)
+        self.task_due_date_entry = DateEntry(task_mgmt_frame, date_pattern='yyyy-mm-dd')
+        self.task_due_date_entry.grid(row=1, column=3, padx=5, pady=5)
+
+        ttk.Label(task_mgmt_frame, text="Priority:").grid(row=2, column=0, padx=5, pady=5)
+        self.task_priority_var = tk.StringVar()
+        priorities = ['High', 'Medium', 'Low']
+        self.task_priority_combo = ttk.Combobox(task_mgmt_frame, textvariable=self.task_priority_var, values=priorities, state='readonly')
         self.task_priority_combo.grid(row=2, column=1, padx=5, pady=5)
+        self.task_priority_combo.set('Medium')
 
-        ttk.Label(add_task_frame, text="Recurring:", font=("Helvetica", 12)).grid(row=3, column=0, padx=5, pady=5, sticky=tk.W)
-        self.task_recur = tk.StringVar()
-        recur_options = ['None', 'Daily', 'Weekly', 'Monthly']
-        self.task_recur_combo = ttk.Combobox(add_task_frame, textvariable=self.task_recur, values=recur_options, state='readonly')
-        self.task_recur_combo.set('None')
-        self.task_recur_combo.grid(row=3, column=1, padx=5, pady=5)
+        add_task_btn = ttk.Button(task_mgmt_frame, text="Add Task", command=self.add_task)
+        add_task_btn.grid(row=2, column=2, columnspan=2, padx=5, pady=5)
 
-        add_task_btn = ttk.Button(add_task_frame, text="Add Task", command=self.add_task)
-        add_task_btn.grid(row=4, column=0, columnspan=2, pady=10)
+        mark_complete_btn = ttk.Button(task_mgmt_frame, text="Mark as Completed", command=self.mark_task_completed)
+        mark_complete_btn.grid(row=3, column=0, columnspan=4, pady=10)
 
-        # Frame for displaying tasks
-        self.tasks_display_frame = ttk.LabelFrame(self.todo_frame, text="Tasks")
-        self.tasks_display_frame.pack(pady=10, fill=tk.BOTH, expand=True, padx=20)
-
-        # Search Bar
-        search_frame = ttk.Frame(self.tasks_display_frame)
-        search_frame.pack(fill=tk.X, padx=5, pady=5)
-
-        ttk.Label(search_frame, text="Search:").pack(side=tk.LEFT, padx=5)
-        self.task_search_var = tk.StringVar()
-        self.task_search_var.trace('w', self.display_tasks)
-        self.task_search_entry = ttk.Entry(search_frame, textvariable=self.task_search_var)
-        self.task_search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-
-        # Filter by Priority
-        ttk.Label(search_frame, text="Filter by Priority:").pack(side=tk.LEFT, padx=5)
-        self.task_filter_var = tk.StringVar()
-        self.task_filter_var.set('All')
-        task_filter_options = ['All', 'High', 'Medium', 'Low']
-        self.task_filter_combo = ttk.Combobox(search_frame, textvariable=self.task_filter_var, values=task_filter_options, state='readonly')
-        self.task_filter_combo.bind("<<ComboboxSelected>>", self.display_tasks)
-        self.task_filter_combo.pack(side=tk.LEFT, padx=5)
-
-        self.tasks_listbox = tk.Listbox(self.tasks_display_frame, selectmode=tk.MULTIPLE, font=("Helvetica", 12))
-        self.tasks_listbox.pack(pady=10, fill=tk.BOTH, expand=True)
-
-        # Enable Drag-and-Drop
-        self.tasks_listbox.bind('<ButtonPress-1>', self.start_drag)
-        self.tasks_listbox.bind('<B1-Motion>', self.do_drag)
-
-        complete_task_btn = ttk.Button(self.todo_frame, text="Mark as Completed", command=self.complete_task)
-        complete_task_btn.pack(pady=5)
+        self.update_tasks_list()
 
     def add_task(self):
         task = self.task_entry.get()
-        due_date = self.task_due_date.get_date()
-        priority = self.task_priority.get()
-        recur_pattern = self.task_recur.get()
+        due_date = self.task_due_date_entry.get_date()
+        priority = self.task_priority_var.get()
 
-        if task:
-            tasks_to_add = self.generate_recurring_tasks(task, due_date, priority, recur_pattern)
-            self.tasks.extend(tasks_to_add)
-            self.task_entry.delete(0, tk.END)
-            self.task_due_date.set_date(datetime.date.today())
-            self.task_priority_combo.set('Medium')
-            self.task_recur_combo.set('None')
-            self.display_tasks()
-        else:
-            messagebox.showwarning("Input Error", "Please enter a task.")
+        if not task:
+            messagebox.showwarning("Input Error", "Please enter a task description.")
+            return
 
-    def generate_recurring_tasks(self, task, start_date, priority, pattern):
-        tasks = []
-        current_date = start_date
-        end_date = start_date + datetime.timedelta(days=365)
-        while current_date <= end_date:
-            tasks.append({'task': task, 'due_date': current_date, 'priority': priority})
-            if pattern == 'None':
-                break
-            if pattern == 'Daily':
-                current_date += datetime.timedelta(days=1)
-            elif pattern == 'Weekly':
-                current_date += datetime.timedelta(weeks=1)
-            elif pattern == 'Monthly':
-                month = current_date.month + 1 if current_date.month < 12 else 1
-                year = current_date.year + 1 if current_date.month == 12 else current_date.year
-                day = min(current_date.day, 28)  # To handle February
-                current_date = datetime.date(year, month, day)
-        return tasks
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT INTO tasks (user_id, task, due_date, priority)
+            VALUES (?, ?, ?, ?)
+        ''', (self.current_user, task, due_date, priority))
+        self.conn.commit()
 
-    def complete_task(self):
-        selected_indices = self.tasks_listbox.curselection()
-        for index in reversed(selected_indices):
-            self.completed_tasks.append(self.tasks[index])
-            del self.tasks[index]
-        self.display_tasks()
+        self.task_entry.delete(0, tk.END)
+        self.task_due_date_entry.set_date(datetime.date.today())
+        self.task_priority_combo.set('Medium')
+
+        self.update_tasks_list()
+
+    def update_tasks_list(self):
+        for item in self.tasks_tree.get_children():
+            self.tasks_tree.delete(item)
+
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT task_id, task, due_date, priority FROM tasks
+            WHERE user_id=? AND completed=0
+            ORDER BY due_date ASC
+        ''', (self.current_user,))
+        tasks = cursor.fetchall()
+
+        for task_id, task, due_date, priority in tasks:
+            self.tasks_tree.insert('', 'end', iid=task_id, values=(due_date, priority), text=task)
+
+    def mark_task_completed(self):
+        selected_items = self.tasks_tree.selection()
+        cursor = self.conn.cursor()
+        for item in selected_items:
+            cursor.execute('''
+                UPDATE tasks SET completed=1 WHERE task_id=?
+            ''', (item,))
+        self.conn.commit()
+        self.update_tasks_list()
         self.update_analytics()
 
-    def display_tasks(self, *args):
-        # Sort tasks by priority and due date
-        priority_order = {'High': 1, 'Medium': 2, 'Low': 3}
-        self.tasks.sort(key=lambda x: (priority_order[x['priority']], x['due_date']))
-
-        # Clear the listbox
-        self.tasks_listbox.delete(0, tk.END)
-
-        search_query = self.task_search_var.get().lower()
-        filter_priority = self.task_filter_var.get()
-
-        for task_info in self.tasks:
-            if search_query in task_info['task'].lower():
-                if filter_priority == 'All' or filter_priority == task_info['priority']:
-                    task_str = f"{task_info['due_date'].strftime('%Y-%m-%d')} - [{task_info['priority']}] {task_info['task']}"
-                    self.tasks_listbox.insert(tk.END, task_str)
-                    # Color code based on priority
-                    color = self.get_priority_color(task_info['priority'])
-                    self.tasks_listbox.itemconfig(tk.END, {'fg': color})
-
-    def get_priority_color(self, priority):
-        color_map = {
-            'High': 'red',
-            'Medium': 'orange',
-            'Low': 'green'
-        }
-        return color_map.get(priority, 'black')
-
-    # Drag-and-Drop Functions
-    def start_drag(self, event):
-        self.dragged_item_index = self.tasks_listbox.nearest(event.y)
-
-    def do_drag(self, event):
-        new_index = self.tasks_listbox.nearest(event.y)
-        if new_index != self.dragged_item_index:
-            # Swap the tasks
-            self.tasks[self.dragged_item_index], self.tasks[new_index] = self.tasks[new_index], self.tasks[self.dragged_item_index]
-            self.display_tasks()
-            self.tasks_listbox.selection_set(new_index)
-            self.dragged_item_index = new_index
-
     # ---------------------- Analytics Tab ---------------------- #
-    def create_analytics(self):
-        ttk.Label(self.analytics_frame, text="Analytics and Progress Tracking", font=("Helvetica", 18)).pack(pady=10)
+    def create_analytics_tab(self):
+        ttk.Label(self.analytics_frame, text="Analytics", font=("Helvetica", 18)).pack(pady=10)
 
-        self.figure = plt.Figure(figsize=(6, 5), dpi=100)
+        self.figure = plt.Figure(figsize=(8, 6), dpi=100)
         self.chart_canvas = FigureCanvasTkAgg(self.figure, self.analytics_frame)
         self.chart_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
         self.update_analytics()
 
     def update_analytics(self):
-        total_tasks = len(self.tasks) + len(self.completed_tasks)
-        completed_tasks = len(self.completed_tasks)
-        pending_tasks = len(self.tasks)
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT COUNT(*) FROM tasks WHERE user_id=? AND completed=1
+        ''', (self.current_user,))
+        completed_tasks = cursor.fetchone()[0]
+
+        cursor.execute('''
+            SELECT COUNT(*) FROM tasks WHERE user_id=? AND completed=0
+        ''', (self.current_user,))
+        pending_tasks = cursor.fetchone()[0]
+
+        total_tasks = completed_tasks + pending_tasks
 
         if total_tasks == 0:
-            # Clear the figure
-            self.figure.clear()
-            self.chart_canvas.draw()
             return
 
-        # Clear the previous figure
         self.figure.clear()
 
-        # Pie Chart
         labels = 'Completed', 'Pending'
         sizes = [completed_tasks, pending_tasks]
         colors = ['green', 'orange']
 
         ax = self.figure.add_subplot(111)
         ax.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
-        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        ax.axis('equal')
 
         self.figure.suptitle('Task Completion Overview')
-
         self.chart_canvas.draw()
+
+    # ---------------------- Help Tab ---------------------- #
+    def create_help_tab(self):
+        ttk.Label(self.help_frame, text="Help and Support", font=("Helvetica", 18)).pack(pady=10)
+        help_text = """
+        **Getting Started**
+
+        - **Login/Register**: Create an account or log in to access your personalized scheduler.
+        - **Scheduler Tab**: View and manage your events on the calendar.
+        - **Tasks Tab**: Add tasks, set priorities, and mark them as completed.
+        - **Analytics Tab**: View your productivity statistics.
+        - **Notifications**: Receive reminders for upcoming tasks and events.
+
+        **Adding Events**
+
+        - Fill in the event title, select the date, and choose the event type.
+        - Click 'Add Event' to save it to your calendar.
+
+        **Adding Tasks**
+
+        - Enter the task description, due date, and select the priority.
+        - Click 'Add Task' to add it to your task list.
+
+        **Export/Import Data**
+
+        - Use the 'Export Data' and 'Import Data' options in the 'File' menu to back up or restore your data.
+        """
+        help_label = ttk.Label(self.help_frame, text=help_text, justify=tk.LEFT)
+        help_label.pack(pady=10, padx=10)
+
+    # ---------------------- Notifications ---------------------- #
+    def notification_worker(self):
+        while True:
+            now = datetime.datetime.now()
+            current_date = now.date()
+            current_time = now.time()
+
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT task FROM tasks
+                WHERE user_id=? AND due_date=? AND completed=0
+            ''', (self.current_user, current_date))
+            tasks_due = cursor.fetchall()
+
+            cursor.execute('''
+                SELECT title FROM events
+                WHERE user_id=? AND event_date=?
+            ''', (self.current_user, current_date))
+            events_today = cursor.fetchall()
+
+            notification_text = ""
+            if tasks_due:
+                tasks_list = ', '.join([task[0] for task in tasks_due])
+                notification_text += f"Tasks Due Today: {tasks_list}\n"
+            if events_today:
+                events_list = ', '.join([event[0] for event in events_today])
+                notification_text += f"Events Today: {events_list}"
+
+            if notification_text:
+                notification.notify(
+                    title="College Scheduler Reminder",
+                    message=notification_text,
+                    timeout=10
+                )
+            time.sleep(3600)  # Check every hour
+
+    # ---------------------- Utility Methods ---------------------- #
+    def clear_window(self):
+        for widget in self.winfo_children():
+            widget.destroy()
+
+    def on_closing(self):
+        self.conn.close()
+        self.destroy()
 
 if __name__ == "__main__":
     app = CollegeScheduler()
+    app.protocol("WM_DELETE_WINDOW", app.on_closing)
     app.mainloop()
-
