@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero">
+    <div class="container text-center text-white">
+        <h1 class="display-3 fw-bold">Empower Your Investments with AlgoNest</h1>
+        <p class="lead">Harness the power of algorithmic trading to maximize your returns.</p>
+        <a href="{% url 'bots_list' %}" class="btn btn-primary btn-lg me-2">Explore Bots</a>
+        <a href="{% url 'contact' %}" class="btn btn-outline-light btn-lg">Get in Touch</a>
+    </div>
+</div>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center mb-4">
+            <h2>Why Choose AlgoNest?</h2>
+            <p class="text-muted">Cutting-edge algorithms, expert strategies, and real-time analytics.</p>
+        </div>
+        <div class="row">
+            <div class="col-md-4 text-center">
+                <img src="{% static 'images/icon1.png' %}" alt="Feature 1" class="mb-3">
+                <h5>Advanced Algorithms</h5>
+                <p>Our bots use state-of-the-art algorithms to analyze market trends and execute trades.</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <img src="{% static 'images/icon2.png' %}" alt="Feature 2" class="mb-3">
+                <h5>Expert Strategies</h5>
+                <p>Developed by seasoned traders, our bots implement proven strategies for optimal returns.</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <img src="{% static 'images/icon3.png' %}" alt="Feature 3" class="mb-3">
+                <h5>Real-Time Analytics</h5>
+                <p>Access real-time performance data and analytics to stay informed about your investments.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Sample Performance Section -->
+<section class="bg-light py-5">
+    <div class="container">
+        <div class="row text-center mb-4">
+            <h2>Sample Bot Performance</h2>
+            <p class="text-muted">Experience the potential of algorithmic trading.</p>
+        </div>
+        <canvas id="samplePerformanceChart"></canvas>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center mb-4">
+            <h2>What Our Users Say</h2>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <blockquote class="blockquote">
+                    <p>"AlgoNest has transformed my trading experience. The bots are phenomenal!"</p>
+                    <footer class="blockquote-footer">Jane Doe, <cite title="Source Title">Professional Trader</cite></footer>
+                </blockquote>
+            </div>
+            <div class="col-md-4">
+                <blockquote class="blockquote">
+                    <p>"The performance analytics and ease of use are unparalleled."</p>
+                    <footer class="blockquote-footer">John Smith, <cite title="Source Title">Investor</cite></footer>
+                </blockquote>
+            </div>
+            <div class="col-md-4">
+                <blockquote class="blockquote">
+                    <p>"I highly recommend AlgoNest to anyone looking to enhance their portfolio."</p>
+                    <footer class="blockquote-footer">Emily Johnson, <cite title="Source Title">Financial Advisor</cite></footer>
+                </blockquote>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action Section -->
+<section class="bg-dark text-white py-5">
+    <div class="container text-center">
+        <h2>Ready to Boost Your Investments?</h2>
+        <p>Join AlgoNest today and take the first step towards smarter trading.</p>
+        <a href="{% url 'bots_list' %}" class="btn btn-primary btn-lg">Get Started</a>
+    </div>
+</section>
+
+<!-- Sample Performance Chart Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('samplePerformanceChart').getContext('2d');
+    const sampleData = {
+        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+        datasets: [{
+            label: 'Aggressive Alpha',
+            data: [3000, 2500, 4000, 2000],
+            borderColor: 'rgba(255, 99, 132, 1)',
+            fill: false,
+        }, {
+            label: 'Balanced Beta',
+            data: [1800, 2200, 2100, 2400],
+            borderColor: 'rgba(54, 162, 235, 1)',
+            fill: false,
+        }, {
+            label: 'Steady Sigma',
+            data: [1000, 1050, 1100, 1120],
+            borderColor: 'rgba(75, 192, 192, 1)',
+            fill: false,
+        }]
+    };
+    const sampleChart = new Chart(ctx, {
+        type: 'line',
+        data: sampleData,
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

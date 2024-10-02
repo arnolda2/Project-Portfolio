@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <!-- Bot Information -->
+        <div class="col-md-8">
+            <h2>{{ bot.name }}</h2>
+            <p>{{ bot.description }}</p>
+            <ul class="list-unstyled">
+                <li><strong>Risk Level:</strong> {{ bot.risk_level }}</li>
+                <li><strong>Monthly Price:</strong> ${{ bot.monthly_price }}</li>
+            </ul>
+
+            <!-- Greek Values -->
+            <h4 class="mt-4">Risk Metrics (Greeks)</h4>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Greek</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for greek in bot.greek_values %}
+                    <tr>
+                        <td>{{ greek.name }}</td>
+                        <td>{{ greek.value }}</td>
+                        <td>{{ greek.description }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Sample Trades -->
+            <h4 class="mt-4">Recent Trades</h4>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Symbol</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Profit/Loss</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trade in bot.sample_trades %}
+                    <tr>
+                        <td>{{ trade.date }}</td>
+                        <td>{{ trade.symbol }}</td>
+                        <td>{{ trade.type }}</td>
+                        <td>{{ trade.quantity }}</td>
+                        <td>${{ trade.price }}</td>
+                        <td>${{ trade.profit_loss }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Performance Overview</h5>
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data for Charts -->
+{{ bot.performance_data|json_script:"performance-data" }}
+
+<!-- Chart Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const data = JSON.parse(document.getElementById('performance-data').textContent);
+    const labels = data.map(item => item[0]);
+    const values = data.map(item => item[1]);
+
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Bot Performance (in USD)',
+                data: values,
+                borderColor: 'rgba(54, 162, 235, 1)',
+                fill: false,
+            }]
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
+{% endblock %}
