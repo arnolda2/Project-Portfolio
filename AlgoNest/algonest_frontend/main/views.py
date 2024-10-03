@@ -1,8 +1,9 @@
 # views.py
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from .models import Bot
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 import os
 
 def landing_page(request):
@@ -130,3 +131,22 @@ def about(request):
 
 def contact(request):
     return render(request, 'contact.html')
+
+def pricing(request):
+    return render(request, 'pricing.html')
+
+def signup(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('login')
+    else:
+        form = UserCreationForm()
+    return render(request, 'signup.html', {'form': form})
+
+def privacy_policy(request):
+    return render(request, 'privacy_policy.html')
+
+def terms_of_service(request):
+    return render(request, 'terms_of_service.html')

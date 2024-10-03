@@ -71,10 +71,10 @@
 
         <!-- Performance Chart -->
         <div class="col-md-4">
-            <div class="card">
+            <div class="card mb-4 shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Performance Overview</h5>
-                    <canvas id="performanceChart"></canvas>
+                    <h5 class="card-title">Historical Performance</h5>
+                    <canvas id="historicalPerformanceChart"></canvas>
                 </div>
             </div>
         </div>
@@ -90,26 +90,27 @@
 {{ bot.performance_data|json_script:"performance-data" }}
 
 <!-- Chart Script -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const data = JSON.parse(document.getElementById('performance-data').textContent);
     const labels = data.map(item => item[0]);
     const values = data.map(item => item[1]);
 
-    const ctx = document.getElementById('performanceChart').getContext('2d');
+    const ctx = document.getElementById('historicalPerformanceChart').getContext('2d');
     const chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Bot Performance (in USD)',
+                label: '{{ bot.name }} Performance (in USD)',
                 data: values,
                 borderColor: 'rgba(54, 162, 235, 1)',
-                fill: false,
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                fill: true,
                 tension: 0.4,
             }]
         },
         options: {
+            responsive: true,
             scales: {
                 y: { beginAtZero: false }
             }

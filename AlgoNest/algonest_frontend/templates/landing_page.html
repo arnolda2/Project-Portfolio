@@ -6,34 +6,46 @@
 <div class="hero">
     <div class="container text-center text-white">
         <h1 class="display-3 fw-bold">Empower Your Investments with AlgoNest</h1>
-        <p class="lead">Harness the power of algorithmic trading to maximize your returns.</p>
-        <a href="{% url 'bots_list' %}" class="btn btn-primary btn-lg me-2">Explore Bots</a>
-        <a href="{% url 'contact' %}" class="btn btn-outline-light btn-lg">Get in Touch</a>
+        <p class="lead mb-4">Harness the power of algorithmic trading to maximize your returns.</p>
+        <a href="{% url 'signup' %}" class="btn btn-primary btn-lg me-2">Get Started</a>
+        <a href="{% url 'bots_list' %}" class="btn btn-outline-light btn-lg">Explore Bots</a>
     </div>
 </div>
 
 <!-- Features Section -->
 <section class="py-5">
     <div class="container">
-        <div class="row text-center mb-4">
-            <h2>Why Choose AlgoNest?</h2>
-            <p class="text-muted">Cutting-edge algorithms, expert strategies, and real-time analytics.</p>
+        <div class="row text-center mb-5">
+            <h2 class="section-title">Why Choose AlgoNest?</h2>
+            <p class="section-subtitle">Cutting-edge algorithms, expert strategies, and real-time analytics.</p>
         </div>
         <div class="row">
-            <div class="col-md-4 text-center">
-                <img src="{% static 'images/icon1.png' %}" alt="Feature 1" class="mb-3">
-                <h5>Advanced Algorithms</h5>
-                <p>Our bots use state-of-the-art algorithms to analyze market trends and execute trades.</p>
+            <div class="col-md-4 mb-4">
+                <div class="feature-box p-4 text-center shadow-sm rounded">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h5>Advanced Algorithms</h5>
+                    <p>Our bots use state-of-the-art algorithms to analyze market trends and execute trades.</p>
+                </div>
             </div>
-            <div class="col-md-4 text-center">
-                <img src="{% static 'images/icon2.png' %}" alt="Feature 2" class="mb-3">
-                <h5>Expert Strategies</h5>
-                <p>Developed by seasoned traders, our bots implement proven strategies for optimal returns.</p>
+            <div class="col-md-4 mb-4">
+                <div class="feature-box p-4 text-center shadow-sm rounded">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h5>Expert Strategies</h5>
+                    <p>Developed by seasoned traders, our bots implement proven strategies for optimal returns.</p>
+                </div>
             </div>
-            <div class="col-md-4 text-center">
-                <img src="{% static 'images/icon3.png' %}" alt="Feature 3" class="mb-3">
-                <h5>Real-Time Analytics</h5>
-                <p>Access real-time performance data and analytics to stay informed about your investments.</p>
+            <div class="col-md-4 mb-4">
+                <div class="feature-box p-4 text-center shadow-sm rounded">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-tachometer-alt"></i>
+                    </div>
+                    <h5>Real-Time Analytics</h5>
+                    <p>Access real-time performance data and analytics to stay informed about your investments.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -42,82 +54,112 @@
 <!-- Sample Performance Section -->
 <section class="bg-light py-5">
     <div class="container">
-        <div class="row text-center mb-4">
-            <h2>Sample Bot Performance</h2>
-            <p class="text-muted">Experience the potential of algorithmic trading.</p>
+        <div class="row text-center mb-5">
+            <h2 class="section-title">See the Growth Potential</h2>
+            <p class="section-subtitle">Discover how our algorithms can enhance your investment portfolio.</p>
         </div>
-        <canvas id="samplePerformanceChart"></canvas>
+        <div class="row">
+            <div class="col">
+                <canvas id="growthProjectionChart"></canvas>
+            </div>
+        </div>
     </div>
 </section>
 
 <!-- Testimonials Section -->
 <section class="py-5">
     <div class="container">
-        <div class="row text-center mb-4">
-            <h2>What Our Users Say</h2>
+        <div class="row text-center mb-5">
+            <h2 class="section-title">What Our Users Say</h2>
         </div>
         <div class="row">
-            <div class="col-md-4">
-                <blockquote class="blockquote">
+            <div class="col-md-4 mb-4">
+                <div class="testimonial shadow-sm p-4 rounded">
                     <p>"AlgoNest has transformed my trading experience. The bots are phenomenal!"</p>
-                    <footer class="blockquote-footer">Jane Doe, <cite title="Source Title">Professional Trader</cite></footer>
-                </blockquote>
+                    <div class="author">Jane Doe</div>
+                    <div class="position">Professional Trader</div>
+                </div>
             </div>
-            <div class="col-md-4">
-                <blockquote class="blockquote">
+            <div class="col-md-4 mb-4">
+                <div class="testimonial shadow-sm p-4 rounded">
                     <p>"The performance analytics and ease of use are unparalleled."</p>
-                    <footer class="blockquote-footer">John Smith, <cite title="Source Title">Investor</cite></footer>
-                </blockquote>
+                    <div class="author">John Smith</div>
+                    <div class="position">Investor</div>
+                </div>
             </div>
-            <div class="col-md-4">
-                <blockquote class="blockquote">
+            <div class="col-md-4 mb-4">
+                <div class="testimonial shadow-sm p-4 rounded">
                     <p>"I highly recommend AlgoNest to anyone looking to enhance their portfolio."</p>
-                    <footer class="blockquote-footer">Emily Johnson, <cite title="Source Title">Financial Advisor</cite></footer>
-                </blockquote>
+                    <div class="author">Emily Johnson</div>
+                    <div class="position">Financial Advisor</div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- Call to Action Section -->
-<section class="bg-dark text-white py-5">
-    <div class="container text-center">
+<section class="cta-section">
+    <div class="container text-center text-white">
         <h2>Ready to Boost Your Investments?</h2>
         <p>Join AlgoNest today and take the first step towards smarter trading.</p>
-        <a href="{% url 'bots_list' %}" class="btn btn-primary btn-lg">Get Started</a>
+        <a href="{% url 'signup' %}" class="btn btn-primary btn-lg">Sign Up Now</a>
     </div>
 </section>
 
-<!-- Sample Performance Chart Script -->
+<!-- Growth Projection Chart Script -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('samplePerformanceChart').getContext('2d');
-    const sampleData = {
-        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+    const ctx = document.getElementById('growthProjectionChart').getContext('2d');
+    const projectionData = {
+        labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
         datasets: [{
             label: 'Aggressive Alpha',
-            data: [3000, 2500, 4000, 2000],
+            data: [10000, 15000, 22500, 33750, 50625],
             borderColor: 'rgba(255, 99, 132, 1)',
-            fill: false,
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            fill: true,
+            tension: 0.4,
         }, {
             label: 'Balanced Beta',
-            data: [1800, 2200, 2100, 2400],
+            data: [10000, 13000, 16900, 21970, 28561],
             borderColor: 'rgba(54, 162, 235, 1)',
-            fill: false,
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            fill: true,
+            tension: 0.4,
         }, {
             label: 'Steady Sigma',
-            data: [1000, 1050, 1100, 1120],
+            data: [10000, 11000, 12100, 13310, 14641],
             borderColor: 'rgba(75, 192, 192, 1)',
-            fill: false,
+            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+            fill: true,
+            tension: 0.4,
         }]
     };
-    const sampleChart = new Chart(ctx, {
+    const projectionChart = new Chart(ctx, {
         type: 'line',
-        data: sampleData,
+        data: projectionData,
         options: {
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            },
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
                 }
             }
         }
