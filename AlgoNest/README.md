@@ -2,7 +2,7 @@
 
 This application, **AlgoNest**, is a subscription-based platform that allows users to subscribe to and use various algorithmic trading bots. It provides a modern interface where users can view, subscribe to, and monitor the performance of trading bots with different risk profiles.
 
-![AlgoNest Image](static/images/Algo1.png)
+![AlgoNest Image](algonest_frontend/static/images/Algo1.png)
 
 ### **Technologies Used:**
 
