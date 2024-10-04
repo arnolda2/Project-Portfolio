@@ -67,13 +67,13 @@ This application, **AlgoNest**, is a subscription-based platform that allows use
 6. **Privacy Policy and Terms of Service**:
    - Legal documents are available for users to understand the terms of service and privacy policies associated with using the platform.
 
-![AlgoNest Image](static/images/Algo1.png)
-![AlgoNest Image](static/images/Algo2.png)
-![AlgoNest Image](static/images/Algo3.png)
-![AlgoNest Image](static/images/Algo4.png)
-![AlgoNest Image](static/images/Algo5.png)
-![AlgoNest Image](static/images/Algo6.png)
-![AlgoNest Image](static/images/Algo7.png)
+![AlgoNest Image](algonest_frontend/static/images/Algo1.png)
+![AlgoNest Image](algonest_frontend/static/images/Algo2.png)
+![AlgoNest Image](algonest_frontend/static/images/Algo3.png)
+![AlgoNest Image](algonest_frontend/static/images/Algo4.png)
+![AlgoNest Image](algonest_frontend/static/images/Algo5.png)
+![AlgoNest Image](algonest_frontend/static/images/Algo6.png)
+![AlgoNest Image](algonest_frontend/static/images/Algo7.png)
 
 
 
